@@ -15,12 +15,20 @@ export class OrmConfigFactory {
   }
 
   public buildConfig(): Options {
+    const host = this.configService.get<string>(
+      OrmModuleConfigProperties.ENV_DATABASE_HOST
+    );
+
+    // Neon DB requires SSL — auto-enable when host is a Neon endpoint
+    const isNeon = host?.includes('neon.tech');
+    const driverOptions = isNeon
+      ? { connection: { ssl: { rejectUnauthorized: false } } }
+      : {};
+
     const config = defineConfig({
       entities: ['dist/model'],
       entitiesTs: ['src/model'],
-      host: this.configService.get<string>(
-        OrmModuleConfigProperties.ENV_DATABASE_HOST
-      ),
+      host,
       dbName: this.configService.get<string>(
         OrmModuleConfigProperties.ENV_DATABASE_SCHEMA
       ),
@@ -33,6 +41,7 @@ export class OrmConfigFactory {
       port: this.configService.get<number>(
         OrmModuleConfigProperties.ENV_DATABASE_PORT
       ),
+      driverOptions,
       metadataProvider: ReflectMetadataProvider,
       highlighter: new SqlHighlighter(),
       debug:
