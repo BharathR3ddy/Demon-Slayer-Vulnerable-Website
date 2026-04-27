@@ -49,6 +49,13 @@ WORKDIR /usr/src/app
 # API test case: set to "true" to enable /api/testing/* endpoints, "false" to disable (override in compose)
 ENV TESTCASE=false
 
+# IMPORTANT: Disable cluster mode by default.
+# Cluster mode forks one worker per CPU — on cloud free tiers this causes OOM (SIGKILL).
+ENV CLUSTER=0
+
+# Ensure production mode
+ENV NODE_ENV=production
+
 # Create default .env (environment variables are set via compose file)
 RUN echo "NODE_ENV=production" > .env || true
 COPY --chown=node:node core/config ./config
