@@ -19,9 +19,14 @@ export class OrmConfigFactory {
       OrmModuleConfigProperties.ENV_DATABASE_HOST
     );
 
-    // Neon DB requires SSL — auto-enable when host is a Neon endpoint
-    const isNeon = host?.includes('neon.tech');
-    const driverOptions = isNeon
+    // Cloud-managed PostgreSQL (Neon, Koyeb, etc.) requires SSL
+    // Auto-enable when host matches known cloud providers, or when DATABASE_SSL=true
+    const requiresSsl =
+      host?.includes('neon.tech') ||
+      host?.includes('koyeb.app') ||
+      host?.includes('koyeb') ||
+      this.configService.get<string>('DATABASE_SSL') === 'true';
+    const driverOptions = requiresSsl
       ? { connection: { ssl: { rejectUnauthorized: false } } }
       : {};
 
