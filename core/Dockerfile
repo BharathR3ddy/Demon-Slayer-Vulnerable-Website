@@ -12,8 +12,7 @@ COPY --chown=node:node backend/tsconfig.build.json ./
 COPY --chown=node:node backend/tsconfig.json ./
 COPY --chown=node:node backend/nest-cli.fast.json ./
 COPY --chown=node:node backend/nest-cli.json ./
-# Create default .env if it doesn't exist (environment variables can also be set via compose file)
-RUN echo "NODE_ENV=production" > .env || true
+COPY --chown=node:node .env ./
 COPY --chown=node:node core/config ./config
 COPY --chown=node:node backend/src ./src
 
@@ -56,8 +55,7 @@ ENV CLUSTER=0
 # Ensure production mode
 ENV NODE_ENV=production
 
-# Create default .env (environment variables are set via compose file)
-RUN echo "NODE_ENV=production" > .env || true
+COPY --chown=node:node .env ./
 COPY --chown=node:node core/config ./config
 
 COPY --chown=node:node --from=build /usr/src/app/node_modules ./node_modules

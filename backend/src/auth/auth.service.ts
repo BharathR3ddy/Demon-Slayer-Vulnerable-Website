@@ -38,41 +38,71 @@ export class AuthService {
     private readonly em: EntityManager,
     private readonly httpClient: HttpClientService
   ) {
-    const privateKey = fs.readFileSync(
+    const resolveKeyPath = (envVar: string, defaultPath: string): string => {
+      const configured =
+        this.configService.get<string>(envVar) || process.env[envVar];
+      if (configured && fs.existsSync(configured)) {
+        return configured;
+      }
+      if (fs.existsSync(defaultPath)) {
+        return defaultPath;
+      }
+      return configured || defaultPath;
+    };
+
+    const privateKeyPath = resolveKeyPath(
+      AuthModuleConfigProperties.ENV_JWT_PRIVATE_KEY_LOCATION,
+      'config/keys/jwtRS256.key'
+    );
+    const publicKeyPath = resolveKeyPath(
+      AuthModuleConfigProperties.ENV_JWT_PUBLIC_KEY_LOCATION,
+      fs.existsSync('config/keys/jwtRS256.key.pub.pem')
+        ? 'config/keys/jwtRS256.key.pub.pem'
+        : 'config/keys/jwtRS256.key.pub'
+    );
+    const jwkPrivateKeyPath = resolveKeyPath(
+      AuthModuleConfigProperties.ENV_JWK_PRIVATE_KEY_LOCATION,
+      'config/keys/jwk.key.pem'
+    );
+    const jwkPublicJsonPath = resolveKeyPath(
+      AuthModuleConfigProperties.ENV_JWK_PUBLIC_JSON,
+      'config/keys/jwk.pub.json'
+    );
+
+    const privateKey = fs.existsSync(privateKeyPath)
+      ? fs.readFileSync(privateKeyPath, 'utf8')
+      : '';
+    const publicKey = fs.existsSync(publicKeyPath)
+      ? fs.readFileSync(publicKeyPath, 'utf8')
+      : '';
+    const jwkPrivateKey = fs.existsSync(jwkPrivateKeyPath)
+      ? fs.readFileSync(jwkPrivateKeyPath, 'utf8')
+      : '';
+    let jwkPublicJson = {};
+    if (fs.existsSync(jwkPublicJsonPath)) {
+      try {
+        jwkPublicJson = JSON.parse(fs.readFileSync(jwkPublicJsonPath, 'utf8'));
+      } catch {
+        jwkPublicJson = {};
+      }
+    }
+
+    const jkuUrl =
+      this.configService.get<string>(AuthModuleConfigProperties.ENV_JKU_URL) ||
+      process.env.JKU_URL ||
+      'http://localhost:3000/api/auth/jku';
+    const x5uUrl =
+      this.configService.get<string>(AuthModuleConfigProperties.ENV_X5U_URL) ||
+      process.env.X5U_URL ||
+      'http://localhost:3000/api/auth/x5u';
+    const jwtSecretKey =
       this.configService.get<string>(
-        AuthModuleConfigProperties.ENV_JWT_PRIVATE_KEY_LOCATION
-      ),
-      'utf8'
-    );
-    const publicKey = fs.readFileSync(
-      this.configService.get<string>(
-        AuthModuleConfigProperties.ENV_JWT_PUBLIC_KEY_LOCATION
-      ),
-      'utf8'
-    );
-    const jwkPrivateKey = fs.readFileSync(
-      this.configService.get<string>(
-        AuthModuleConfigProperties.ENV_JWK_PRIVATE_KEY_LOCATION
-      ),
-      'utf8'
-    );
-    const jwkPublicJson = JSON.parse(
-      fs.readFileSync(
-        this.configService.get<string>(
-          AuthModuleConfigProperties.ENV_JWK_PUBLIC_JSON
-        ),
-        'utf8'
-      )
-    );
-    const jkuUrl = this.configService.get<string>(
-      AuthModuleConfigProperties.ENV_JKU_URL
-    );
-    const x5uUrl = this.configService.get<string>(
-      AuthModuleConfigProperties.ENV_X5U_URL
-    );
-    const jwtSecretKey = configService.get<string>(
-      AuthModuleConfigProperties.ENV_JWT_SECRET_KEY
-    );
+        AuthModuleConfigProperties.ENV_JWT_SECRET_KEY
+      ) ||
+      this.configService.get<string>('JWT_SECRET') ||
+      process.env.JWT_SECRET ||
+      process.env.JWT_SECRET_KEY ||
+      '1234';
 
     this.processors = new Map();
     this.processors.set(
