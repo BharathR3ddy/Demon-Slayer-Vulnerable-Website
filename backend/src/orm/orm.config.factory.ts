@@ -15,17 +15,64 @@ export class OrmConfigFactory {
   }
 
   public buildConfig(): Options {
-    const host = this.configService.get<string>(
+    const databaseUrl =
+      this.configService.get<string>('DATABASE_URL') ||
+      process.env.DATABASE_URL;
+
+    let host = this.configService.get<string>(
       OrmModuleConfigProperties.ENV_DATABASE_HOST
     );
+    let port = this.configService.get<number>(
+      OrmModuleConfigProperties.ENV_DATABASE_PORT
+    );
+    let user = this.configService.get<string>(
+      OrmModuleConfigProperties.ENV_DATABASE_USER
+    );
+    let password = this.configService.get<string>(
+      OrmModuleConfigProperties.ENV_DATABASE_PASSWORD
+    );
+    let dbName =
+      this.configService.get<string>(
+        OrmModuleConfigProperties.ENV_DATABASE_SCHEMA
+      ) ||
+      this.configService.get<string>('DATABASE_NAME') ||
+      process.env.DATABASE_NAME;
 
-    // Cloud-managed PostgreSQL (Neon, Koyeb, etc.) requires SSL
+    // Parse DATABASE_URL if provided (Neon, Render, Supabase standard)
+    if (databaseUrl) {
+      try {
+        const parsed = new URL(databaseUrl);
+        host = parsed.hostname;
+        if (parsed.port) {
+          port = parseInt(parsed.port, 10);
+        }
+        if (parsed.username) {
+          user = decodeURIComponent(parsed.username);
+        }
+        if (parsed.password) {
+          password = decodeURIComponent(parsed.password);
+        }
+        const pathDb = parsed.pathname.replace(/^\//, '');
+        if (pathDb) {
+          dbName = pathDb;
+        }
+      } catch (e) {
+        logger.warn(`Could not parse DATABASE_URL: ${e.message}`);
+      }
+    }
+
+    // Cloud-managed PostgreSQL (Neon, Render, Koyeb, Supabase) requires SSL
     // Auto-enable when host matches known cloud providers, or when DATABASE_SSL=true
     const requiresSsl =
+      databaseUrl?.includes('sslmode=require') ||
+      databaseUrl?.includes('neon.tech') ||
       host?.includes('neon.tech') ||
       host?.includes('koyeb.app') ||
       host?.includes('koyeb') ||
-      this.configService.get<string>('DATABASE_SSL') === 'true';
+      host?.includes('render.com') ||
+      this.configService.get<string>('DATABASE_SSL') === 'true' ||
+      process.env.DATABASE_SSL === 'true';
+
     const driverOptions = requiresSsl
       ? { connection: { ssl: { rejectUnauthorized: false } } }
       : {};
@@ -33,19 +80,12 @@ export class OrmConfigFactory {
     const config = defineConfig({
       entities: ['dist/model'],
       entitiesTs: ['src/model'],
+      clientUrl: databaseUrl,
       host,
-      dbName: this.configService.get<string>(
-        OrmModuleConfigProperties.ENV_DATABASE_SCHEMA
-      ),
-      user: this.configService.get<string>(
-        OrmModuleConfigProperties.ENV_DATABASE_USER
-      ),
-      password: this.configService.get<string>(
-        OrmModuleConfigProperties.ENV_DATABASE_PASSWORD
-      ),
-      port: this.configService.get<number>(
-        OrmModuleConfigProperties.ENV_DATABASE_PORT
-      ),
+      dbName: dbName || 'demonslayer',
+      user,
+      password,
+      port: port ? Number(port) : 5432,
       driverOptions,
       metadataProvider: ReflectMetadataProvider,
       highlighter: new SqlHighlighter(),

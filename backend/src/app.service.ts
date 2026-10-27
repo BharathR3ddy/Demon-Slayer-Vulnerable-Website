@@ -46,27 +46,52 @@ export class AppService {
   }
 
   getConfig(): AppConfig {
-    const dbSchema = this.configService.get<string>(
+    const databaseUrl =
+      this.configService.get<string>('DATABASE_URL') ||
+      process.env.DATABASE_URL;
+
+    let dbSchema =
+      this.configService.get<string>(
         OrmModuleConfigProperties.ENV_DATABASE_SCHEMA
-      ),
-      dbHost = this.configService.get<string>(
+      ) ||
+      this.configService.get<string>('DATABASE_NAME') ||
+      process.env.DATABASE_NAME ||
+      '';
+    let dbHost =
+      this.configService.get<string>(
         OrmModuleConfigProperties.ENV_DATABASE_HOST
-      ),
-      dbPort = this.configService.get<string>(
+      ) || '';
+    let dbPort =
+      this.configService.get<string>(
         OrmModuleConfigProperties.ENV_DATABASE_PORT
-      ),
-      dbUser = this.configService.get<string>(
+      ) || '';
+    let dbUser =
+      this.configService.get<string>(
         OrmModuleConfigProperties.ENV_DATABASE_USER
-      ),
-      dbPwd = this.configService.get<string>(
+      ) || '';
+    let dbPwd =
+      this.configService.get<string>(
         OrmModuleConfigProperties.ENV_DATABASE_PASSWORD
-      );
+      ) || '';
+
+    if (databaseUrl && (!dbHost || !dbUser)) {
+      try {
+        const parsed = new URL(databaseUrl);
+        dbHost = parsed.hostname;
+        dbPort = parsed.port || '5432';
+        dbUser = decodeURIComponent(parsed.username);
+        dbPwd = decodeURIComponent(parsed.password);
+        dbSchema = parsed.pathname.replace(/^\//, '');
+      } catch {
+        // ignore
+      }
+    }
 
     return {
       awsBucket: this.configService.get<string>(
         AppModuleConfigProperties.ENV_AWS_BUCKET
       ),
-      sql: `postgres://${dbUser}:${dbPwd}@${dbHost}:${dbPort}/${dbSchema} `,
+      sql: databaseUrl || `postgres://${dbUser}:${dbPwd}@${dbHost}:${dbPort}/${dbSchema} `,
       googlemaps: this.configService.get<string>(
         AppModuleConfigProperties.ENV_GOOGLE_MAPS
       )
