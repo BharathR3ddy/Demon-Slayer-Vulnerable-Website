@@ -1,13 +1,11 @@
 set names 'utf8';
-set session_replication_role = 'replica';
 
-create table "user" ("id" serial primary key, "created_at" timestamptz(0) not null, "updated_at" timestamptz(0) not null, "email" varchar(255) not null, "password" varchar(255) not null, "first_name" varchar(255) not null, "last_name" varchar(255) not null, "is_admin" bool not null, "role" varchar(50) not null default 'people', "photo" bytea null, "company" varchar(255) not null, "card_number" varchar(255) not null, "phone_number" varchar(255) not null, "is_basic" bool not null);
+create table if not exists "user" ("id" serial primary key, "created_at" timestamptz(0) not null, "updated_at" timestamptz(0) not null, "email" varchar(255) not null, "password" varchar(255) not null, "first_name" varchar(255) not null, "last_name" varchar(255) not null, "is_admin" bool not null, "role" varchar(50) not null default 'people', "photo" bytea null, "company" varchar(255) not null, "card_number" varchar(255) not null, "phone_number" varchar(255) not null, "is_basic" bool not null);
 
-create table "testimonial" ("id" serial primary key, "created_at" timestamptz(0) not null, "updated_at" timestamptz(0) not null, "name" varchar(255) not null, "title" varchar(255) not null, "message" varchar(255) not null);
+create table if not exists "testimonial" ("id" serial primary key, "created_at" timestamptz(0) not null, "updated_at" timestamptz(0) not null, "name" varchar(255) not null, "title" varchar(255) not null, "message" varchar(255) not null);
 
-create table "product" ("id" serial primary key, "created_at" timestamptz(0) not null default now(), "category" varchar(255) not null, "photo_url" varchar(255) not null, "name" varchar(255) not null, "description" varchar(255) null, "views_count" int DEFAULT 0);
+create table if not exists "product" ("id" serial primary key, "created_at" timestamptz(0) not null default now(), "category" varchar(255) not null, "photo_url" varchar(255) not null, "name" varchar(255) not null, "description" varchar(255) null, "views_count" int DEFAULT 0);
 
-set session_replication_role = 'origin';
 --password is admin
 INSERT INTO "user" (created_at, updated_at, email, password, first_name, last_name, is_admin, role, photo, company, card_number, phone_number, is_basic) VALUES (now(), now(), 'admin', '$argon2id$v=19$m=65536,t=3,p=4$jmtTCTEcjngErif00RfYAg$biS59Ixnrz+dHeJrJ91ybmHt+4wrVgcH3RXvfaqZtNI', 'admin', 'admin', true, 'super_admin', null, 'Demon Slayer Corps', '1234 5678 9012 3456', '+1 234 567 890', true);
 --password is admin123
@@ -34,13 +32,13 @@ INSERT INTO "product" ("created_at", "category", "photo_url", "name", "descripti
 CREATE INDEX IF NOT EXISTS "IDX_users_email" ON "user" ("email");
 
 -- Create mission table
-create table "mission" ("id" serial primary key, "created_at" timestamptz(0) not null, "updated_at" timestamptz(0) not null, "title" varchar(255) not null, "description" text not null, "mission_type" varchar(50) not null default 'kill_demon', "status" varchar(50) not null default 'pending', "assigned_by_id" int not null, "assigned_to_id" int null, "location" varchar(255) null, "notes" text null, "completed_at" timestamptz(0) null);
+create table if not exists "mission" ("id" serial primary key, "created_at" timestamptz(0) not null, "updated_at" timestamptz(0) not null, "title" varchar(255) not null, "description" text not null, "mission_type" varchar(50) not null default 'kill_demon', "status" varchar(50) not null default 'pending', "assigned_by_id" int not null, "assigned_to_id" int null, "location" varchar(255) null, "notes" text null, "completed_at" timestamptz(0) null);
 
 -- Create chat_message table
-create table "chat_message" ("id" serial primary key, "created_at" timestamptz(0) not null, "updated_at" timestamptz(0) not null, "message" text not null, "sender_id" int not null, "sender_role" varchar(50) null, "recipient_id" int null, "is_public" bool not null default false, "hashira_image" varchar(255) null);
+create table if not exists "chat_message" ("id" serial primary key, "created_at" timestamptz(0) not null, "updated_at" timestamptz(0) not null, "message" text not null, "sender_id" int not null, "sender_role" varchar(50) null, "recipient_id" int null, "is_public" bool not null default false, "hashira_image" varchar(255) null);
 
 -- Create system_logs table
-create table "system_logs" ("id" serial primary key, "created_at" timestamptz(0) not null default now(), "level" varchar(20) not null, "message" text not null, "context" jsonb null);
+create table if not exists "system_logs" ("id" serial primary key, "created_at" timestamptz(0) not null default now(), "level" varchar(20) not null, "message" text not null, "context" jsonb null);
 INSERT INTO "system_logs" ("level", "message", "context") VALUES ('info', 'System initialized', '{}');
 INSERT INTO "system_logs" ("level", "message", "context") VALUES ('warn', 'High memory usage detected', '{"memory": "85%"}');
 INSERT INTO "system_logs" ("level", "message", "context") VALUES ('error', 'Database connection failed', '{"retries": 3}');
